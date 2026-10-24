@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePublic } from "@/lib/revalidate-public";
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 import { parseBodyType, parseDoors, parseSpecs } from "@/lib/catalog";
@@ -86,8 +86,7 @@ export async function createCar(formData: FormData) {
     createdAt: new Date().toISOString(),
   });
   await saveStore(store);
-  revalidatePath("/");
-  revalidatePath("/admin");
+  revalidatePublic(["/admin"]);
   redirect("/admin/cars");
 }
 
@@ -107,9 +106,7 @@ export async function updateCar(formData: FormData) {
     ...parsed,
   };
   await saveStore(store);
-  revalidatePath("/");
-  revalidatePath(`/cars/${parsed.slug}`);
-  revalidatePath("/admin/cars");
+  revalidatePublic([`/cars/${parsed.slug}`, "/admin/cars"]);
   redirect("/admin/cars");
 }
 
@@ -124,9 +121,7 @@ export async function togglePublish(formData: FormData) {
     car.updatedAt = new Date().toISOString();
     await saveStore(store);
   }
-  revalidatePath("/");
-  revalidatePath("/admin");
-  revalidatePath("/admin/cars");
+  revalidatePublic(["/admin", "/admin/cars"]);
 }
 
 export async function deleteCar(formData: FormData) {
@@ -135,7 +130,6 @@ export async function deleteCar(formData: FormData) {
   const store = await getStore();
   store.cars = store.cars.filter((car) => car.id !== id);
   await saveStore(store);
-  revalidatePath("/");
-  revalidatePath("/admin/cars");
+  revalidatePublic(["/admin/cars"]);
   redirect("/admin/cars");
 }

@@ -5,7 +5,7 @@ import { HomeFinder } from "@/components/HomeFinder";
 import { getSettings } from "@/lib/settings";
 import { listPublishedCars, listPublicStaff } from "@/lib/store";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function HomePage() {
   const [published, staff, settings] = await Promise.all([

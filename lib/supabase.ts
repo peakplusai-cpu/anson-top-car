@@ -1,5 +1,48 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+/** Abort hung PostgREST calls instead of waiting for the ~14s platform timeout. */
+export const SUPABASE_FETCH_MS = 3000;
+export const PUBLIC_DATA_TAG = "anson-public";
+
+function supabaseFetch(kind: "public" | "admin"): typeof fetch {
+  return (input, init) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), SUPABASE_FETCH_MS);
+    const parent = init?.signal;
+    if (parent) {
+      if (parent.aborted) controller.abort(parent.reason);
+      else parent.addEventListener("abort", () => controller.abort(parent.reason), { once: true });
+    }
+    const method = String(init?.method || "GET").toUpperCase();
+    const cacheOpts =
+      kind === "public" && method === "GET"
+        ? { next: { revalidate: 60, tags: [PUBLIC_DATA_TAG] } }
+        : { cache: "no-store" as const };
+    return fetch(input, {
+      ...init,
+      ...cacheOpts,
+      signal: controller.signal,
+    } as RequestInit).finally(() => clearTimeout(timer));
+  };
+}
+
+export async function failSoft<T>(work: PromiseLike<T>, fallback: T, ms = SUPABASE_FETCH_MS + 400): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.resolve(work),
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("supabase timeout")), ms);
+      }),
+    ]);
+  } catch (error) {
+    console.error("supabase fail-soft", error);
+    return fallback;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function firstEnv(...names: string[]): string {
   for (const name of names) {
     const value = process.env[name]?.trim();
@@ -58,6 +101,7 @@ export function supabaseAdmin(): SupabaseClient {
   }
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: supabaseFetch("admin") },
   });
 }
 
@@ -70,5 +114,6 @@ export function supabasePublic(): SupabaseClient {
   }
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: supabaseFetch("public") },
   });
 }

@@ -7,7 +7,12 @@ import { formatMileage, formatPrice, statusLabel } from "@/lib/format";
 import { getSettings } from "@/lib/settings";
 import { getPublishedCar, listPublicStaff } from "@/lib/store";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
+export const dynamicParams = true;
+
+export function generateStaticParams() {
+  return [] as { slug: string }[];
+}
 
 export default async function CarPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

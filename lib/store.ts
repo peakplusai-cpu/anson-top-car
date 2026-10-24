@@ -4,6 +4,7 @@ import { parseBodyType, parseDoors } from "./catalog";
 import type { Admin, Car, SpecRow, Staff, Store } from "./types";
 import { seedStore } from "./seed";
 import {
+  failSoft,
   isReadOnlyRuntime,
   supabaseAdmin,
   supabaseAdminConfigured,
@@ -126,11 +127,16 @@ function rowToCar(row: Record<string, unknown>): Car {
 
 async function getSupabaseStore(): Promise<Store> {
   const db = supabaseAdmin();
-  const [adminRes, staffRes, carsRes] = await Promise.all([
-    db.from("admin").select("*").eq("id", 1).maybeSingle(),
-    db.from("staff").select("*").order("sort_order"),
-    db.from("cars").select("*").order("created_at", { ascending: false }),
-  ]);
+  const results = await failSoft(
+    Promise.all([
+      db.from("admin").select("*").eq("id", 1).maybeSingle(),
+      db.from("staff").select("*").order("sort_order"),
+      db.from("cars").select("*").order("created_at", { ascending: false }),
+    ]),
+    null
+  );
+  if (!results) return emptyStore();
+  const [adminRes, staffRes, carsRes] = results;
   if (staffRes.error) console.error("supabase staff", staffRes.error);
   if (carsRes.error) console.error("supabase cars", carsRes.error);
   if (adminRes.error) console.error("supabase admin", adminRes.error);
@@ -229,69 +235,66 @@ export async function getStore(): Promise<Store> {
 
 export async function listPublishedCars(): Promise<Car[]> {
   if (supabaseConfigured()) {
-    try {
-      if (supabaseAnonConfigured() || supabaseAdminConfigured()) {
-        const { data, error } = await supabasePublic()
-          .from("cars")
-          .select("*")
-          .eq("published", true)
-          .order("created_at", { ascending: false });
-        if (error) {
-          console.error("supabase listPublishedCars", error);
-          return [];
-        }
-        return (data ?? []).map((row) => rowToCar(row as Record<string, unknown>));
-      }
-      return [];
-    } catch (error) {
-      console.error("supabase listPublishedCars", error);
-      return [];
-    }
+    if (!(supabaseAnonConfigured() || supabaseAdminConfigured())) return [];
+    return failSoft(
+      supabasePublic()
+        .from("cars")
+        .select("*")
+        .eq("published", true)
+        .order("created_at", { ascending: false })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("supabase listPublishedCars", error);
+            return [];
+          }
+          return (data ?? []).map((row) => rowToCar(row as Record<string, unknown>));
+        }),
+      []
+    );
   }
   return getJsonStore().cars.filter((car) => car.published);
 }
 
 export async function getPublishedCar(slug: string): Promise<Car | null> {
   if (supabaseConfigured()) {
-    try {
-      if (supabaseAnonConfigured() || supabaseAdminConfigured()) {
-        const { data, error } = await supabasePublic()
-          .from("cars")
-          .select("*")
-          .eq("slug", slug)
-          .eq("published", true)
-          .maybeSingle();
-        if (error) {
-          console.error("supabase getPublishedCar", error);
-          return null;
-        }
-        return data ? rowToCar(data as Record<string, unknown>) : null;
-      }
-      return null;
-    } catch (error) {
-      console.error("supabase getPublishedCar", error);
-      return null;
-    }
+    if (!(supabaseAnonConfigured() || supabaseAdminConfigured())) return null;
+    return failSoft(
+      supabasePublic()
+        .from("cars")
+        .select("*")
+        .eq("slug", slug)
+        .eq("published", true)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("supabase getPublishedCar", error);
+            return null;
+          }
+          return data ? rowToCar(data as Record<string, unknown>) : null;
+        }),
+      null
+    );
   }
   return getJsonStore().cars.find((car) => car.slug === slug && car.published) ?? null;
 }
 
 export async function listPublicStaff(): Promise<Staff[]> {
   if (supabaseConfigured()) {
-    try {
-      if (supabaseAnonConfigured() || supabaseAdminConfigured()) {
-        const { data, error } = await supabasePublic().from("staff").select("*").order("sort_order");
-        if (error) {
-          console.error("supabase listPublicStaff", error);
-          return [];
-        }
-        return (data ?? []).map((row) => rowToStaff(row as Record<string, unknown>));
-      }
-      return [];
-    } catch (error) {
-      console.error("supabase listPublicStaff", error);
-      return [];
-    }
+    if (!(supabaseAnonConfigured() || supabaseAdminConfigured())) return [];
+    return failSoft(
+      supabasePublic()
+        .from("staff")
+        .select("*")
+        .order("sort_order")
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("supabase listPublicStaff", error);
+            return [];
+          }
+          return (data ?? []).map((row) => rowToStaff(row as Record<string, unknown>));
+        }),
+      []
+    );
   }
   return [...getJsonStore().staff].sort((a, b) => a.sortOrder - b.sortOrder);
 }

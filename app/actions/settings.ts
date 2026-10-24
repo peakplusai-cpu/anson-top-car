@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePublic } from "@/lib/revalidate-public";
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 import { parseContactUrl } from "@/lib/contacts";
@@ -23,6 +23,6 @@ export async function saveContacts(formData: FormData) {
   } catch {
     redirect("/admin/settings?error=save");
   }
-  revalidatePath("/", "layout");
+  revalidatePublic(["/admin/settings"]);
   redirect("/admin/settings?saved=1");
 }

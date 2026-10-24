@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import {
+  failSoft,
   isReadOnlyRuntime,
   supabaseAdmin,
   supabaseAdminConfigured,
@@ -43,13 +44,19 @@ export async function getSettings(): Promise<SiteSettings> {
     try {
       if (!supabaseAnonConfigured() && !supabaseAdminConfigured()) return defaultSettings();
       const db = supabasePublic();
-      const { data, error } = await db
-        .from("site_settings")
-        .select("instagram, line_url, instagram_url")
-        .eq("id", 1)
-        .maybeSingle();
-      if (error || !data) return defaultSettings();
-      const row = data as { instagram?: string; line_url?: string; instagram_url?: string };
+      const row = await failSoft(
+        db
+          .from("site_settings")
+          .select("instagram, line_url, instagram_url")
+          .eq("id", 1)
+          .maybeSingle()
+          .then(({ data, error }) => {
+            if (error || !data) return null;
+            return data as { instagram?: string; line_url?: string; instagram_url?: string };
+          }),
+        null
+      );
+      if (!row) return defaultSettings();
       return normalize({
         lineUrl: row.line_url,
         instagramUrl: row.instagram_url,

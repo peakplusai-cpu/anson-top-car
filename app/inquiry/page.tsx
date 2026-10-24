@@ -5,7 +5,7 @@ import { InquiryPicker } from "@/components/InquiryPicker";
 import { getSettings } from "@/lib/settings";
 import { getPublishedCar, listPublicStaff } from "@/lib/store";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function InquiryPage({
   searchParams,

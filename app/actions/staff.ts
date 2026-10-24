@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePublic } from "@/lib/revalidate-public";
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 import { uid } from "@/lib/id";
@@ -49,9 +49,7 @@ export async function upsertStaff(formData: FormData) {
     });
   }
   await saveStore(store);
-  revalidatePath("/");
-  revalidatePath("/inquiry");
-  revalidatePath("/admin/staff");
+  revalidatePublic(["/admin/staff"]);
   redirect("/admin/staff");
 }
 
@@ -61,7 +59,5 @@ export async function deleteStaff(formData: FormData) {
   const store = await getStore();
   store.staff = store.staff.filter((person) => person.id !== id);
   await saveStore(store);
-  revalidatePath("/");
-  revalidatePath("/inquiry");
-  revalidatePath("/admin/staff");
+  revalidatePublic(["/admin/staff"]);
 }
