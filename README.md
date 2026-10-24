@@ -25,14 +25,18 @@ http://localhost:3000 — 員工後台 `/admin`，密碼 `anson-admin-2026`（`A
 | `NEXT_PUBLIC_SITE_URL` | 正式網址（sitemap / OG） |
 | `NEXT_PUBLIC_LINE_URL` | LINE 佔位網址（可被後台覆寫） |
 | `NEXT_PUBLIC_INSTAGRAM_URL` | Instagram 佔位網址（可被後台覆寫） |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 專案 URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 公開讀取（RLS：僅上架車輛） |
-| `SUPABASE_SERVICE_ROLE_KEY` | 後台寫入、照片上傳（**不可**暴露到瀏覽器） |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 專案 URL（一設就走 Postgres，不寫 `data/*.json`） |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 公開讀取。可填 JWT `anon`（`eyJ…`）或 `sb_publishable_…` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 可選別名，等同 anon / publishable |
+| `SUPABASE_SERVICE_ROLE_KEY` | 後台寫入、照片上傳。可填 JWT `service_role` 或 `sb_secret_…`（**不可**暴露到瀏覽器） |
+| `SUPABASE_SECRET_KEY` | 可選別名，等同 service_role / secret |
+
+新專案 Dashboard 預設給 `sb_publishable_` / `sb_secret_`，可貼進上列變數。舊 JWT 仍可用。Vercel 唯讀檔案系統上不會建立 `data/store.json`；沒有車輛時前台顯示空庫存，不再 500。
 
 ## Supabase
 
 1. 建立專案 → SQL Editor 依序執行 `supabase/schema.sql`、`supabase/seed.sql`（或 `supabase/migrations/20261024_anson_top_car.sql`）。
-2. Settings → API 複製 Project URL、anon `public` key、`service_role` key。
+2. Settings → API Keys 複製 Project URL，以及 publishable（或舊 anon JWT）與 secret（或舊 service_role JWT）。
 3. 本機或 CI：
 
 ```bash

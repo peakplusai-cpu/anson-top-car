@@ -1,4 +1,13 @@
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+function resolvedSiteUrl(): string {
+  const raw = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").trim();
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return "http://localhost:3000";
+  }
+}
+
+export const SITE_URL = resolvedSiteUrl();
 export const SITE_NAME = "Anson Top Car";
 export const SITE_NAME_ZH = "安森頂車";
 export const SITE_DESCRIPTION = "安森頂車｜嚴選中古車，實車實價，LINE 預約賞車";

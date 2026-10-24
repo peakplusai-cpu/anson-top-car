@@ -4,6 +4,7 @@ import { parseBodyType, parseDoors } from "./catalog";
 import type { Admin, Car, SpecRow, Staff, Store } from "./types";
 import { seedStore } from "./seed";
 import {
+  isReadOnlyRuntime,
   supabaseAdmin,
   supabaseAdminConfigured,
   supabaseAnonConfigured,
@@ -20,27 +21,42 @@ function emptyStore(): Store {
 }
 
 function persistJson(store: Store): void {
-  mkdirSync(dirname(STORE_PATH), { recursive: true });
-  const tmp = `${STORE_PATH}.${process.pid}.${Date.now()}.tmp`;
-  writeFileSync(tmp, JSON.stringify(store, null, 2), "utf8");
-  renameSync(tmp, STORE_PATH);
+  if (isReadOnlyRuntime()) return;
+  try {
+    mkdirSync(dirname(STORE_PATH), { recursive: true });
+    const tmp = `${STORE_PATH}.${process.pid}.${Date.now()}.tmp`;
+    writeFileSync(tmp, JSON.stringify(store, null, 2), "utf8");
+    renameSync(tmp, STORE_PATH);
+  } catch (error) {
+    console.error("json store persist skipped", error);
+  }
 }
 
 function getJsonStore(): Store {
   if (jsonCache) return jsonCache;
-  if (!existsSync(STORE_PATH)) {
-    jsonCache = seedStore(emptyStore());
-    persistJson(jsonCache);
+  if (isReadOnlyRuntime()) {
+    jsonCache = emptyStore();
     return jsonCache;
   }
-  const parsed = JSON.parse(readFileSync(STORE_PATH, "utf8")) as Store;
-  jsonCache = {
-    admin: parsed.admin ?? null,
-    staff: parsed.staff ?? [],
-    cars: (parsed.cars ?? []).map(normalizeCar),
-    sessions: parsed.sessions ?? [],
-  };
-  return jsonCache;
+  try {
+    if (!existsSync(STORE_PATH)) {
+      jsonCache = seedStore(emptyStore());
+      persistJson(jsonCache);
+      return jsonCache;
+    }
+    const parsed = JSON.parse(readFileSync(STORE_PATH, "utf8")) as Store;
+    jsonCache = {
+      admin: parsed.admin ?? null,
+      staff: parsed.staff ?? [],
+      cars: (parsed.cars ?? []).map(normalizeCar),
+      sessions: parsed.sessions ?? [],
+    };
+    return jsonCache;
+  } catch (error) {
+    console.error("json store read failed", error);
+    jsonCache = emptyStore();
+    return jsonCache;
+  }
 }
 
 function rowToStaff(row: Record<string, unknown>): Staff {
@@ -115,9 +131,9 @@ async function getSupabaseStore(): Promise<Store> {
     db.from("staff").select("*").order("sort_order"),
     db.from("cars").select("*").order("created_at", { ascending: false }),
   ]);
-  if (adminRes.error) throw adminRes.error;
-  if (staffRes.error) throw staffRes.error;
-  if (carsRes.error) throw carsRes.error;
+  if (staffRes.error) console.error("supabase staff", staffRes.error);
+  if (carsRes.error) console.error("supabase cars", carsRes.error);
+  if (adminRes.error) console.error("supabase admin", adminRes.error);
   const adminRow = adminRes.data as { password_hash: string; created_at: string } | null;
   const admin: Admin | null = adminRow
     ? { passwordHash: adminRow.password_hash, createdAt: adminRow.created_at }
@@ -198,56 +214,84 @@ async function saveSupabaseStore(store: Store): Promise<void> {
 }
 
 export async function getStore(): Promise<Store> {
-  if (supabaseAdminConfigured()) return getSupabaseStore();
   if (supabaseConfigured()) {
-    const published = await listPublishedCars();
-    const staff = await listPublicStaff();
-    return { admin: null, staff, cars: published, sessions: [] };
+    try {
+      if (supabaseAdminConfigured()) return await getSupabaseStore();
+      const [published, staff] = await Promise.all([listPublishedCars(), listPublicStaff()]);
+      return { admin: null, staff, cars: published, sessions: [] };
+    } catch (error) {
+      console.error("supabase getStore", error);
+      return emptyStore();
+    }
   }
   return getJsonStore();
 }
 
 export async function listPublishedCars(): Promise<Car[]> {
-  if (supabaseAnonConfigured()) {
-    const { data, error } = await supabasePublic()
-      .from("cars")
-      .select("*")
-      .eq("published", true)
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map((row) => rowToCar(row as Record<string, unknown>));
-  }
-  if (supabaseAdminConfigured()) {
-    return (await getSupabaseStore()).cars.filter((car) => car.published);
+  if (supabaseConfigured()) {
+    try {
+      if (supabaseAnonConfigured() || supabaseAdminConfigured()) {
+        const { data, error } = await supabasePublic()
+          .from("cars")
+          .select("*")
+          .eq("published", true)
+          .order("created_at", { ascending: false });
+        if (error) {
+          console.error("supabase listPublishedCars", error);
+          return [];
+        }
+        return (data ?? []).map((row) => rowToCar(row as Record<string, unknown>));
+      }
+      return [];
+    } catch (error) {
+      console.error("supabase listPublishedCars", error);
+      return [];
+    }
   }
   return getJsonStore().cars.filter((car) => car.published);
 }
 
 export async function getPublishedCar(slug: string): Promise<Car | null> {
-  if (supabaseAnonConfigured()) {
-    const { data, error } = await supabasePublic()
-      .from("cars")
-      .select("*")
-      .eq("slug", slug)
-      .eq("published", true)
-      .maybeSingle();
-    if (error) throw error;
-    return data ? rowToCar(data as Record<string, unknown>) : null;
-  }
-  if (supabaseAdminConfigured()) {
-    return (await getSupabaseStore()).cars.find((car) => car.slug === slug && car.published) ?? null;
+  if (supabaseConfigured()) {
+    try {
+      if (supabaseAnonConfigured() || supabaseAdminConfigured()) {
+        const { data, error } = await supabasePublic()
+          .from("cars")
+          .select("*")
+          .eq("slug", slug)
+          .eq("published", true)
+          .maybeSingle();
+        if (error) {
+          console.error("supabase getPublishedCar", error);
+          return null;
+        }
+        return data ? rowToCar(data as Record<string, unknown>) : null;
+      }
+      return null;
+    } catch (error) {
+      console.error("supabase getPublishedCar", error);
+      return null;
+    }
   }
   return getJsonStore().cars.find((car) => car.slug === slug && car.published) ?? null;
 }
 
 export async function listPublicStaff(): Promise<Staff[]> {
-  if (supabaseAnonConfigured()) {
-    const { data, error } = await supabasePublic().from("staff").select("*").order("sort_order");
-    if (error) throw error;
-    return (data ?? []).map((row) => rowToStaff(row as Record<string, unknown>));
-  }
-  if (supabaseAdminConfigured()) {
-    return [...(await getSupabaseStore()).staff].sort((a, b) => a.sortOrder - b.sortOrder);
+  if (supabaseConfigured()) {
+    try {
+      if (supabaseAnonConfigured() || supabaseAdminConfigured()) {
+        const { data, error } = await supabasePublic().from("staff").select("*").order("sort_order");
+        if (error) {
+          console.error("supabase listPublicStaff", error);
+          return [];
+        }
+        return (data ?? []).map((row) => rowToStaff(row as Record<string, unknown>));
+      }
+      return [];
+    } catch (error) {
+      console.error("supabase listPublicStaff", error);
+      return [];
+    }
   }
   return [...getJsonStore().staff].sort((a, b) => a.sortOrder - b.sortOrder);
 }
@@ -258,7 +302,7 @@ export async function saveStore(store: Store): Promise<void> {
     return;
   }
   if (supabaseConfigured()) {
-    throw new Error("Admin writes need SUPABASE_SERVICE_ROLE_KEY");
+    throw new Error("Admin writes need SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY");
   }
   jsonCache = store;
   persistJson(store);

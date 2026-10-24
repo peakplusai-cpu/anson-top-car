@@ -31,6 +31,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ url: data.publicUrl });
   }
 
+  if (process.env.VERCEL) {
+    return NextResponse.json(
+      { error: "Photo upload on Vercel needs SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY" },
+      { status: 500 }
+    );
+  }
   const dir = join(process.cwd(), "public", "uploads");
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, name), buffer);

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import {
+  isReadOnlyRuntime,
   supabaseAdmin,
   supabaseAdminConfigured,
   supabaseAnonConfigured,
@@ -40,7 +41,8 @@ function normalize(partial: Partial<SiteSettings> & { instagram?: string }): Sit
 export async function getSettings(): Promise<SiteSettings> {
   if (supabaseConfigured()) {
     try {
-      const db = supabaseAnonConfigured() ? supabasePublic() : supabaseAdmin();
+      if (!supabaseAnonConfigured() && !supabaseAdminConfigured()) return defaultSettings();
+      const db = supabasePublic();
       const { data, error } = await db
         .from("site_settings")
         .select("instagram, line_url, instagram_url")
@@ -57,12 +59,13 @@ export async function getSettings(): Promise<SiteSettings> {
       return defaultSettings();
     }
   }
-  if (!existsSync(SETTINGS_PATH)) {
-    const seeded = defaultSettings();
-    persist(seeded);
-    return seeded;
-  }
+  if (isReadOnlyRuntime()) return defaultSettings();
   try {
+    if (!existsSync(SETTINGS_PATH)) {
+      const seeded = defaultSettings();
+      persist(seeded);
+      return seeded;
+    }
     const parsed = JSON.parse(readFileSync(SETTINGS_PATH, "utf8")) as Partial<SiteSettings> & {
       instagram?: string;
     };
@@ -73,10 +76,15 @@ export async function getSettings(): Promise<SiteSettings> {
 }
 
 function persist(settings: SiteSettings): void {
-  mkdirSync(dirname(SETTINGS_PATH), { recursive: true });
-  const tmp = `${SETTINGS_PATH}.${process.pid}.${Date.now()}.tmp`;
-  writeFileSync(tmp, JSON.stringify(settings, null, 2), "utf8");
-  renameSync(tmp, SETTINGS_PATH);
+  if (isReadOnlyRuntime()) return;
+  try {
+    mkdirSync(dirname(SETTINGS_PATH), { recursive: true });
+    const tmp = `${SETTINGS_PATH}.${process.pid}.${Date.now()}.tmp`;
+    writeFileSync(tmp, JSON.stringify(settings, null, 2), "utf8");
+    renameSync(tmp, SETTINGS_PATH);
+  } catch (error) {
+    console.error("settings persist skipped", error);
+  }
 }
 
 export async function saveSettings(settings: SiteSettings): Promise<void> {
@@ -94,7 +102,7 @@ export async function saveSettings(settings: SiteSettings): Promise<void> {
     return;
   }
   if (supabaseConfigured()) {
-    throw new Error("Saving contact URLs needs SUPABASE_SERVICE_ROLE_KEY");
+    throw new Error("Saving contact URLs needs SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY");
   }
   persist(settings);
 }
