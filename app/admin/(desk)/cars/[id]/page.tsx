@@ -1,0 +1,28 @@
+import { notFound } from "next/navigation";
+import { deleteCar, updateCar } from "@/app/actions/cars";
+import { CarForm } from "@/components/CarForm";
+import { getStore } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+
+export default async function EditCarPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const car = (await getStore()).cars.find((item) => item.id === id);
+  if (!car) notFound();
+
+  return (
+    <>
+      <p className="engraved">Edit</p>
+      <h1>
+        {car.make} {car.model}
+      </h1>
+      <CarForm car={car} action={updateCar} />
+      <form action={deleteCar} style={{ marginTop: 40 }}>
+        <input type="hidden" name="id" value={car.id} />
+        <button className="btn btn-rosso" type="submit">
+          刪除車輛
+        </button>
+      </form>
+    </>
+  );
+}
