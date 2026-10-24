@@ -41,7 +41,7 @@ export function HomeFinder({
         <div className="hero-shade" />
         <div className="hero-copy">
           <p className="engraved">台中 · 嚴選中古車</p>
-          <h1>安森頂車</h1>
+          <h1>Anson Top Car</h1>
           <p className="lead">實車在店、標價公開。挑車、賞車、過戶，LINE 一則訊息即可開始。</p>
           <div className="hero-actions">
             <a className="btn btn-ghost" href="#inventory" style={{ color: "#fff", borderColor: "#fff" }}>

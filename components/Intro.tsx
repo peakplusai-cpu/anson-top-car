@@ -42,8 +42,7 @@ export function Intro() {
       }}
     >
       <div className="intro-mark">
-        <b>安森頂車</b>
-        <span>Anson Top Car</span>
+        <b>Anson Top Car</b>
       </div>
     </div>
   );

@@ -24,7 +24,7 @@ export default async function DeskLayout({ children }: { children: React.ReactNo
     <div className="admin-shell">
       <aside className="admin-side">
         <Link href="/" className="wordmark">
-          <span className="wordmark-zh">安森頂車</span>
+          <span className="wordmark-zh">Anson Top Car</span>
           <span className="wordmark-en">Staff</span>
         </Link>
         <nav>

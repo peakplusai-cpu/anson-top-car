@@ -11,8 +11,7 @@ export async function Footer({ staff }: { staff: Staff[] }) {
       <div className="footer-grid">
         <div>
           <div className="wordmark">
-            <span className="wordmark-zh">安森頂車</span>
-            <span className="wordmark-en">Anson Top Car</span>
+            <span className="wordmark-zh">Anson Top Car</span>
           </div>
           <p className="footer-note">
             嚴選中古車，實車在店、實價標示。賞車、估價、貸款請直接 LINE

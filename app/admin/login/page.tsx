@@ -18,7 +18,7 @@ export default async function LoginPage({
         <p className="engraved">Staff</p>
         <h1>登入</h1>
         <p className="mute" style={{ marginBottom: 32 }}>
-          安森頂車員工入口。預設密碼見專案 README（ADMIN_PASSWORD）。
+          Anson Top Car 員工入口。預設密碼見專案 README（ADMIN_PASSWORD）。
         </p>
         {error ? <p className="flash">密碼不正確。</p> : null}
         <form action={loginAdmin}>

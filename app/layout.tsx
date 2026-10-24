@@ -3,7 +3,6 @@ import "./globals.css";
 import {
   SITE_DESCRIPTION,
   SITE_NAME,
-  SITE_NAME_ZH,
   SITE_URL,
   jsonLdAutoDealer,
 } from "@/lib/site";
@@ -11,8 +10,8 @@ import {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME_ZH} ${SITE_NAME}`,
-    template: `%s · ${SITE_NAME_ZH}`,
+    default: SITE_NAME,
+    template: `%s · ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
@@ -23,13 +22,13 @@ export const metadata: Metadata = {
     locale: "zh_TW",
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: `${SITE_NAME_ZH} ${SITE_NAME}`,
+    title: SITE_NAME,
     description: SITE_DESCRIPTION,
-    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: SITE_NAME_ZH }],
+    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: SITE_NAME }],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME_ZH} ${SITE_NAME}`,
+    title: SITE_NAME,
     description: SITE_DESCRIPTION,
     images: ["/og.jpg"],
   },
