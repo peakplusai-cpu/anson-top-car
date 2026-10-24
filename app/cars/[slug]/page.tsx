@@ -134,7 +134,7 @@ export default async function CarPage({ params }: { params: Promise<{ slug: stri
         </div>
         <ContactButtons lineUrl={settings.lineUrl} instagramUrl={settings.instagramUrl} inverted />
       </div>
-      <Footer staff={staff} />
+      <Footer staff={staff} settings={settings} />
     </>
   );
 }

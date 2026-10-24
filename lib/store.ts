@@ -1,9 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
+import { unstable_cache } from "next/cache";
 import { dirname, join } from "path";
 import { parseBodyType, parseDoors } from "./catalog";
 import type { Admin, Car, SpecRow, Staff, Store } from "./types";
 import { seedStore } from "./seed";
 import {
+  PUBLIC_DATA_TAG,
   failSoft,
   isReadOnlyRuntime,
   supabaseAdmin,
@@ -233,9 +235,9 @@ export async function getStore(): Promise<Store> {
   return getJsonStore();
 }
 
-export async function listPublishedCars(): Promise<Car[]> {
-  if (supabaseConfigured()) {
-    if (!(supabaseAnonConfigured() || supabaseAdminConfigured())) return [];
+const cachedPublishedCars = unstable_cache(
+  async () => {
+    if (!(supabaseAnonConfigured() || supabaseAdminConfigured())) return [] as Car[];
     return failSoft(
       supabasePublic()
         .from("cars")
@@ -245,42 +247,20 @@ export async function listPublishedCars(): Promise<Car[]> {
         .then(({ data, error }) => {
           if (error) {
             console.error("supabase listPublishedCars", error);
-            return [];
+            return [] as Car[];
           }
           return (data ?? []).map((row) => rowToCar(row as Record<string, unknown>));
         }),
-      []
+      [] as Car[]
     );
-  }
-  return getJsonStore().cars.filter((car) => car.published);
-}
+  },
+  ["anson-published-cars"],
+  { revalidate: 60, tags: [PUBLIC_DATA_TAG] }
+);
 
-export async function getPublishedCar(slug: string): Promise<Car | null> {
-  if (supabaseConfigured()) {
-    if (!(supabaseAnonConfigured() || supabaseAdminConfigured())) return null;
-    return failSoft(
-      supabasePublic()
-        .from("cars")
-        .select("*")
-        .eq("slug", slug)
-        .eq("published", true)
-        .maybeSingle()
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("supabase getPublishedCar", error);
-            return null;
-          }
-          return data ? rowToCar(data as Record<string, unknown>) : null;
-        }),
-      null
-    );
-  }
-  return getJsonStore().cars.find((car) => car.slug === slug && car.published) ?? null;
-}
-
-export async function listPublicStaff(): Promise<Staff[]> {
-  if (supabaseConfigured()) {
-    if (!(supabaseAnonConfigured() || supabaseAdminConfigured())) return [];
+const cachedPublicStaff = unstable_cache(
+  async () => {
+    if (!(supabaseAnonConfigured() || supabaseAdminConfigured())) return [] as Staff[];
     return failSoft(
       supabasePublic()
         .from("staff")
@@ -289,13 +269,28 @@ export async function listPublicStaff(): Promise<Staff[]> {
         .then(({ data, error }) => {
           if (error) {
             console.error("supabase listPublicStaff", error);
-            return [];
+            return [] as Staff[];
           }
           return (data ?? []).map((row) => rowToStaff(row as Record<string, unknown>));
         }),
-      []
+      [] as Staff[]
     );
-  }
+  },
+  ["anson-public-staff"],
+  { revalidate: 60, tags: [PUBLIC_DATA_TAG] }
+);
+
+export async function listPublishedCars(): Promise<Car[]> {
+  if (supabaseConfigured()) return cachedPublishedCars();
+  return getJsonStore().cars.filter((car) => car.published);
+}
+
+export async function getPublishedCar(slug: string): Promise<Car | null> {
+  return (await listPublishedCars()).find((car) => car.slug === slug) ?? null;
+}
+
+export async function listPublicStaff(): Promise<Staff[]> {
+  if (supabaseConfigured()) return cachedPublicStaff();
   return [...getJsonStore().staff].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 

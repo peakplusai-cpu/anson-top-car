@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { ContactButtons } from "@/components/ContactButtons";
 import { LineLaunch } from "@/components/LineLaunch";
-import { getSettings } from "@/lib/settings";
+import type { SiteSettings } from "@/lib/settings";
 import type { Staff } from "@/lib/types";
 
-export async function Footer({ staff }: { staff: Staff[] }) {
-  const settings = await getSettings();
+export function Footer({ staff, settings }: { staff: Staff[]; settings: SiteSettings }) {
   return (
     <footer className="site-footer">
       <div className="footer-grid">

@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
+import { unstable_cache } from "next/cache";
 import { dirname, join } from "path";
 import {
+  PUBLIC_DATA_TAG,
   failSoft,
   isReadOnlyRuntime,
   supabaseAdmin,
@@ -39,29 +41,36 @@ function normalize(partial: Partial<SiteSettings> & { instagram?: string }): Sit
   };
 }
 
+const cachedRemoteSettings = unstable_cache(
+  async (): Promise<SiteSettings> => {
+    if (!supabaseAnonConfigured() && !supabaseAdminConfigured()) return defaultSettings();
+    const row = await failSoft(
+      supabasePublic()
+        .from("site_settings")
+        .select("instagram, line_url, instagram_url")
+        .eq("id", 1)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (error || !data) return null;
+          return data as { instagram?: string; line_url?: string; instagram_url?: string };
+        }),
+      null
+    );
+    if (!row) return defaultSettings();
+    return normalize({
+      lineUrl: row.line_url,
+      instagramUrl: row.instagram_url,
+      instagram: row.instagram,
+    });
+  },
+  ["anson-public-settings"],
+  { revalidate: 60, tags: [PUBLIC_DATA_TAG] }
+);
+
 export async function getSettings(): Promise<SiteSettings> {
   if (supabaseConfigured()) {
     try {
-      if (!supabaseAnonConfigured() && !supabaseAdminConfigured()) return defaultSettings();
-      const db = supabasePublic();
-      const row = await failSoft(
-        db
-          .from("site_settings")
-          .select("instagram, line_url, instagram_url")
-          .eq("id", 1)
-          .maybeSingle()
-          .then(({ data, error }) => {
-            if (error || !data) return null;
-            return data as { instagram?: string; line_url?: string; instagram_url?: string };
-          }),
-        null
-      );
-      if (!row) return defaultSettings();
-      return normalize({
-        lineUrl: row.line_url,
-        instagramUrl: row.instagram_url,
-        instagram: row.instagram,
-      });
+      return await cachedRemoteSettings();
     } catch {
       return defaultSettings();
     }
