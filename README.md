@@ -4,7 +4,7 @@
 
 - UI：繁體中文（台灣），白底黑字
 - 資料：本機 JSON，或生產環境 **Supabase Postgres + Storage**
-- 部署：GitHub (`peakplusai-cpu/anson-top-car`) + 獨立 Vercel / Supabase 專案（與布萊恩車庫無關）
+- 部署：GitHub (`peakplusai-cpu/anson-top-car`) + 獨立 Vercel / Supabase 專案
 
 ## 本機執行（JSON，無需資料庫）
 

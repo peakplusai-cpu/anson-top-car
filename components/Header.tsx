@@ -14,8 +14,10 @@ export function Header() {
         </Link>
         <nav className="nav">
           <Link href="/#inventory">庫存</Link>
-          <Link href="/inquiry">預約賞車</Link>
           <Link href="/admin">員工</Link>
+          <Link href="/inquiry" className="nav-cta">
+            預約賞車
+          </Link>
         </nav>
         <button className="nav-toggle" type="button" onClick={() => setOpen(true)}>
           選單

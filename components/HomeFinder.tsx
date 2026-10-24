@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { BrandStrip } from "@/components/BrandStrip";
 import { ContactButtons } from "@/components/ContactButtons";
 import { HeroReel } from "@/components/HeroReel";
 import {
@@ -49,8 +50,15 @@ export function HomeFinder({
             </a>
             <ContactButtons lineUrl={lineUrl} instagramUrl={instagramUrl} inverted />
           </div>
+          <ul className="hero-points">
+            <li>實車在店</li>
+            <li>公開標價</li>
+            <li>LINE 預約賞車</li>
+          </ul>
         </div>
       </section>
+
+      <BrandStrip />
 
       <section className="filter-bar" id="inventory">
         <p className="engraved">Inventory</p>

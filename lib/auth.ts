@@ -5,7 +5,7 @@ import { getStore } from "./store";
 
 export { hashPassword, verifyPassword };
 
-const COOKIE = "atelier_session";
+const COOKIE = "atc_session";
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 const SECRET = process.env.SESSION_SECRET || "anson-top-car-local-session";
 
