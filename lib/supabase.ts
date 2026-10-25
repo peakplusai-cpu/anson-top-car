@@ -1,13 +1,62 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /** Abort hung PostgREST calls instead of waiting for the ~14s platform timeout. */
-export const SUPABASE_FETCH_MS = 3000;
+export const SUPABASE_FETCH_MS = 2000;
+/** First contact / NXDOMAIN / connect: do not wait out resolver or 12s write budget. */
+export const SUPABASE_CONNECT_MS = 1500;
 export const PUBLIC_DATA_TAG = "anson-public";
+
+const UNREACHABLE_TTL_MS = 60_000;
+
+let reachable: boolean | null = null;
+let unreachableUntil = 0;
+
+export function supabaseUnreachable(): boolean {
+  return reachable === false && Date.now() < unreachableUntil;
+}
+
+function markReachable(): void {
+  reachable = true;
+  unreachableUntil = 0;
+}
+
+function markUnreachable(): void {
+  reachable = false;
+  unreachableUntil = Date.now() + UNREACHABLE_TTL_MS;
+}
+
+function attemptTimeout(requestedMs: number): number {
+  if (reachable === true) return requestedMs;
+  return Math.min(requestedMs, SUPABASE_CONNECT_MS);
+}
+
+function isNetworkFailure(error: unknown): boolean {
+  const err = error as { name?: string; code?: string; message?: string; cause?: { code?: string; name?: string } };
+  const code = String(err?.code || err?.cause?.code || "");
+  const name = String(err?.name || err?.cause?.name || "");
+  const message = String(err?.message || "");
+  return (
+    name === "AbortError" ||
+    name === "TimeoutError" ||
+    code === "ENOTFOUND" ||
+    code === "EAI_AGAIN" ||
+    code === "ENETUNREACH" ||
+    code === "ECONNREFUSED" ||
+    code === "ETIMEDOUT" ||
+    code === "UND_ERR_CONNECT_TIMEOUT" ||
+    code === "UND_ERR_DNS" ||
+    /fetch failed|aborted|ENOTFOUND|undici|timeout/i.test(message)
+  );
+}
+
+const unreachableError = () => new Error("supabase unreachable");
 
 function supabaseFetch(kind: "public" | "admin", timeoutMs = SUPABASE_FETCH_MS): typeof fetch {
   return (input, init) => {
+    if (supabaseUnreachable()) return Promise.reject(unreachableError());
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const budget = attemptTimeout(timeoutMs);
+    const timer = setTimeout(() => controller.abort(), budget);
     const parent = init?.signal;
     if (parent) {
       if (parent.aborted) controller.abort(parent.reason);
@@ -22,20 +71,32 @@ function supabaseFetch(kind: "public" | "admin", timeoutMs = SUPABASE_FETCH_MS):
       ...init,
       ...cacheOpts,
       signal: controller.signal,
-    } as RequestInit).finally(() => clearTimeout(timer));
+    } as RequestInit)
+      .then((res) => {
+        markReachable();
+        return res;
+      })
+      .catch((error) => {
+        if (reachable !== true && isNetworkFailure(error)) markUnreachable();
+        throw error;
+      })
+      .finally(() => clearTimeout(timer));
   };
 }
 
 export async function failSoft<T>(work: PromiseLike<T>, fallback: T, ms = SUPABASE_FETCH_MS + 400): Promise<T> {
+  if (supabaseUnreachable()) return fallback;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const budget = reachable === true ? ms : Math.min(ms, SUPABASE_CONNECT_MS + 400);
   try {
     return await Promise.race([
       Promise.resolve(work),
       new Promise<T>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("supabase timeout")), ms);
+        timer = setTimeout(() => reject(new Error("supabase timeout")), budget);
       }),
     ]);
   } catch (error) {
+    if (reachable !== true && isNetworkFailure(error)) markUnreachable();
     console.error("supabase fail-soft", error);
     return fallback;
   } finally {

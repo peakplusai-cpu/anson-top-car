@@ -298,7 +298,6 @@ export async function listPublicStaff(): Promise<Staff[]> {
 }
 
 const WRITE_MS = 12000;
-const WRITE_SOFT_MS = WRITE_MS + 400;
 
 /** List columns omit photos JSON so desk counts/tables do not pull the full inventory blob. */
 const ADMIN_CAR_LIST_COLUMNS =
@@ -308,7 +307,7 @@ export async function listAdminCars(): Promise<Car[]> {
   if (!(await isAuthenticated())) return [];
   if (!supabaseConfigured()) return getJsonStore().cars;
   if (!supabaseAdminConfigured()) return failSoft(listPublishedCars(), [] as Car[]);
-  const db = supabaseAdmin(WRITE_MS);
+  const db = supabaseAdmin();
   return failSoft(
     db
       .from("cars")
@@ -321,8 +320,7 @@ export async function listAdminCars(): Promise<Car[]> {
         }
         return (data ?? []).map((row) => rowToCar(row as Record<string, unknown>));
       }),
-    [] as Car[],
-    WRITE_SOFT_MS
+    [] as Car[]
   );
 }
 
@@ -332,7 +330,7 @@ export async function listAdminStaff(): Promise<Staff[]> {
     return [...getJsonStore().staff].sort((a, b) => a.sortOrder - b.sortOrder);
   }
   if (!supabaseAdminConfigured()) return failSoft(listPublicStaff(), [] as Staff[]);
-  const db = supabaseAdmin(WRITE_MS);
+  const db = supabaseAdmin();
   return failSoft(
     db
       .from("staff")
@@ -345,8 +343,7 @@ export async function listAdminStaff(): Promise<Staff[]> {
         }
         return (data ?? []).map((row) => rowToStaff(row as Record<string, unknown>));
       }),
-    [] as Staff[],
-    WRITE_SOFT_MS
+    [] as Staff[]
   );
 }
 
@@ -359,7 +356,7 @@ export async function getAdminCar(id: string): Promise<Car | null> {
     const published = await listPublishedCars();
     return published.find((car) => car.id === id) ?? null;
   }
-  const db = supabaseAdmin(WRITE_MS);
+  const db = supabaseAdmin();
   return failSoft(
     db
       .from("cars")
@@ -373,8 +370,7 @@ export async function getAdminCar(id: string): Promise<Car | null> {
         }
         return data ? rowToCar(data as Record<string, unknown>) : null;
       }),
-    null,
-    WRITE_SOFT_MS
+    null
   );
 }
 
@@ -423,13 +419,21 @@ export async function insertCar(car: Car): Promise<void> {
     throw new Error("後台寫入需要 SUPABASE_SERVICE_ROLE_KEY");
   }
   const db = supabaseAdmin(WRITE_MS);
-  let row = carRow(car);
-  let { error } = await db.from("cars").insert(row);
-  if (error?.code === "23505") {
-    row = { ...row, slug: `${car.slug}-${Date.now().toString(36)}` };
-    ({ error } = await db.from("cars").insert(row));
+  try {
+    let row = carRow(car);
+    let { error } = await db.from("cars").insert(row);
+    if (error?.code === "23505") {
+      row = { ...row, slug: `${car.slug}-${Date.now().toString(36)}` };
+      ({ error } = await db.from("cars").insert(row));
+    }
+    if (error) throw new Error(error.message || "新增車輛失敗");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (/unreachable|fetch failed|ENOTFOUND|aborted|timeout/i.test(message)) {
+      throw new Error("資料庫連不到。請在 Vercel 設定 Anson 專用的 NEXT_PUBLIC_SUPABASE_URL 與 SUPABASE_SERVICE_ROLE_KEY 後 Redeploy。");
+    }
+    throw error;
   }
-  if (error) throw new Error(error.message || "新增車輛失敗");
 }
 
 export async function saveStore(store: Store): Promise<void> {
