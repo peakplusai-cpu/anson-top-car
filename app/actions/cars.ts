@@ -6,7 +6,7 @@ import { isAuthenticated } from "@/lib/auth";
 import { parseBodyType, parseDoors, parseSpecs } from "@/lib/catalog";
 import { slugify } from "@/lib/format";
 import { uid } from "@/lib/id";
-import { getStore, saveStore } from "@/lib/store";
+import { getStore, insertCar, saveStore } from "@/lib/store";
 import type { Car, CarStatus, Photo } from "@/lib/types";
 
 async function requireAuth() {
@@ -87,17 +87,12 @@ function rethrowRedirect(error: unknown): void {
 export async function createCar(formData: FormData) {
   await requireAuth();
   try {
-    const store = await getStore();
     const parsed = parseCar(formData);
-    if (store.cars.some((car) => car.slug === parsed.slug)) {
-      parsed.slug = `${parsed.slug}-${uid("x").slice(-4)}`;
-    }
-    store.cars.unshift({
+    await insertCar({
       ...parsed,
       id: uid("car"),
       createdAt: new Date().toISOString(),
     });
-    await saveStore(store);
   } catch (error) {
     rethrowRedirect(error);
     console.error("createCar", error);

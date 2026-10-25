@@ -296,6 +296,62 @@ export async function listPublicStaff(): Promise<Staff[]> {
   return [...getJsonStore().staff].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+const WRITE_MS = 12000;
+
+function carRow(car: Car) {
+  return {
+    id: car.id,
+    slug: car.slug,
+    make: car.make,
+    make_en: car.makeEn,
+    model: car.model,
+    year: Number.isFinite(car.year) ? car.year : new Date().getFullYear(),
+    price: Number.isFinite(car.price) ? Math.round(car.price) : 0,
+    mileage: Number.isFinite(car.mileage) ? car.mileage : 0,
+    color: car.color,
+    interior: car.interior,
+    engine: car.engine,
+    horsepower: Number.isFinite(car.horsepower) ? car.horsepower : 0,
+    transmission: car.transmission,
+    drivetrain: car.drivetrain,
+    doors: car.doors,
+    body_type: car.bodyType,
+    displacement: car.displacement,
+    options: car.options,
+    specs: car.specs,
+    equipment: car.equipment,
+    story: car.story,
+    status: car.status,
+    published: car.published,
+    featured: car.featured,
+    photos: car.photos,
+    created_at: car.createdAt,
+    updated_at: car.updatedAt,
+  };
+}
+
+/** Insert one car. Does not read or rewrite the rest of the inventory. */
+export async function insertCar(car: Car): Promise<void> {
+  if (!supabaseConfigured()) {
+    const store = getJsonStore();
+    store.cars.unshift(car);
+    jsonCache = store;
+    persistJson(store);
+    return;
+  }
+  if (!supabaseAdminConfigured()) {
+    throw new Error("後台寫入需要 SUPABASE_SERVICE_ROLE_KEY");
+  }
+  const db = supabaseAdmin(WRITE_MS);
+  let row = carRow(car);
+  let { error } = await db.from("cars").insert(row);
+  if (error?.code === "23505") {
+    row = { ...row, slug: `${car.slug}-${Date.now().toString(36)}` };
+    ({ error } = await db.from("cars").insert(row));
+  }
+  if (error) throw new Error(error.message || "新增車輛失敗");
+}
+
 export async function saveStore(store: Store): Promise<void> {
   if (supabaseAdminConfigured()) {
     await saveSupabaseStore(store);

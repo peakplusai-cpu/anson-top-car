@@ -4,10 +4,10 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 export const SUPABASE_FETCH_MS = 3000;
 export const PUBLIC_DATA_TAG = "anson-public";
 
-function supabaseFetch(kind: "public" | "admin"): typeof fetch {
+function supabaseFetch(kind: "public" | "admin", timeoutMs = SUPABASE_FETCH_MS): typeof fetch {
   return (input, init) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), SUPABASE_FETCH_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const parent = init?.signal;
     if (parent) {
       if (parent.aborted) controller.abort(parent.reason);
@@ -93,16 +93,22 @@ export function supabaseAnonConfigured(): boolean {
   return Boolean(supabaseUrl() && supabaseAnonKey());
 }
 
-export function supabaseAdmin(): SupabaseClient {
+const adminClients = new Map<number, SupabaseClient>();
+
+export function supabaseAdmin(timeoutMs = SUPABASE_FETCH_MS): SupabaseClient {
   const url = supabaseUrl();
   const key = supabaseSecretKey();
   if (!url || !key) {
     throw new Error("Supabase service role is not configured");
   }
-  return createClient(url, key, {
+  const cached = adminClients.get(timeoutMs);
+  if (cached) return cached;
+  const client = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: { fetch: supabaseFetch("admin") },
+    global: { fetch: supabaseFetch("admin", timeoutMs) },
   });
+  adminClients.set(timeoutMs, client);
+  return client;
 }
 
 /** Anon/publishable client: RLS applies. Public pages use this to read published cars and settings. */
