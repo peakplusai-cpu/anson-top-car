@@ -466,6 +466,50 @@ img { max-width: 100%; display: block; }
 
 .empty-line { max-width: 42ch; line-height: 1.8; }
 
+.reel-section {
+  padding: 12px var(--pad) 96px;
+}
+
+.reel-section h2 {
+  font-family: var(--ui);
+  font-weight: 800;
+  font-size: clamp(32px, 5vw, 64px);
+  letter-spacing: -0.045em;
+  margin: 8px 0 28px;
+}
+
+.reel-card {
+  margin: 0;
+  width: min(420px, 100%);
+  background: var(--paper);
+  border: 1px solid var(--hair);
+  border-radius: 24px;
+  padding: 12px 12px 20px;
+  overflow: hidden;
+}
+
+.reel-card blockquote {
+  margin: 0 auto;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.reel-caption {
+  margin: 16px 8px 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.45;
+}
+
+.reel-more {
+  display: inline-block;
+  margin: 12px 8px 0;
+  font-size: 14px;
+  color: #00376b;
+}
+
 .site-footer {
   margin-top: 24px;
   background: var(--ink);

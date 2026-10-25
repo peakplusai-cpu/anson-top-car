@@ -16,12 +16,12 @@ export default async function SettingsPage({
       <p className="engraved">Site</p>
       <h1>聯絡設定</h1>
       <p className="mute" style={{ maxWidth: 520, lineHeight: 1.7, marginBottom: 28 }}>
-        LINE 與 Instagram 為全站按鈕連結，官網首頁、車輛頁、頁尾都會使用。可填完整網址，或 LINE ID /
-        Instagram 帳號。留空則不顯示該按鈕。
+        LINE 與 Instagram 為全站按鈕連結。介紹影片只要貼一則 Instagram Reels／貼文或抖音連結，首頁只顯示這一格；換成新片改這裡即可。
       </p>
       {saved ? <p className="flash">已儲存。</p> : null}
       {error === "line" ? <p className="flash">LINE 網址格式不正確。</p> : null}
       {error === "instagram" ? <p className="flash">Instagram 網址格式不正確。</p> : null}
+      {error === "video" ? <p className="flash">請貼 Instagram 貼文／Reels 或抖音影片連結。</p> : null}
       {error === "save" ? <p className="flash">儲存失敗，請稍後再試。</p> : null}
 
       <form action={saveContacts}>
@@ -46,6 +46,27 @@ export default async function SettingsPage({
               placeholder="https://instagram.com/帳號"
               autoComplete="off"
               spellCheck={false}
+            />
+          </div>
+          <div className="field wide">
+            <label htmlFor="featuredVideoUrl">最新介紹影片（Instagram 或抖音，一格）</label>
+            <input
+              id="featuredVideoUrl"
+              name="featuredVideoUrl"
+              defaultValue={settings.featuredVideoUrl}
+              placeholder="https://www.instagram.com/reel/…… 或 https://www.tiktok.com/@帳號/video/……"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
+          <div className="field wide">
+            <label htmlFor="featuredVideoCaption">影片說明（選填）</label>
+            <input
+              id="featuredVideoCaption"
+              name="featuredVideoCaption"
+              defaultValue={settings.featuredVideoCaption}
+              placeholder="例如：省油耐操的代名詞，車壇不滅的國民神車。"
+              autoComplete="off"
             />
           </div>
         </div>

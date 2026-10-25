@@ -35,7 +35,7 @@ http://localhost:3000 — 員工後台 `/admin`，密碼 `anson-admin-2026`（`A
 
 ## Supabase
 
-1. 建立專案 → SQL Editor 依序執行 `supabase/schema.sql`、`supabase/seed.sql`（或 `supabase/migrations/20261024_anson_top_car.sql`）。
+1. 建立專案 → SQL Editor 依序執行 `supabase/schema.sql`、`supabase/seed.sql`（或 `supabase/migrations/20261024_anson_top_car.sql`）。已上線的專案再跑 `supabase/migrations/20261025_featured_video.sql`（首頁介紹影片欄位）。
 2. Settings → API Keys 複製 Project URL，以及 publishable（或舊 anon JWT）與 secret（或舊 service_role JWT）。
 3. 本機或 CI：
 

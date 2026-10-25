@@ -15,6 +15,8 @@ import {
 export type SiteSettings = {
   lineUrl: string;
   instagramUrl: string;
+  featuredVideoUrl: string;
+  featuredVideoCaption: string;
 };
 
 const SETTINGS_PATH = join(process.cwd(), "data", "settings.json");
@@ -26,18 +28,49 @@ export function defaultSettings(): SiteSettings {
   return {
     lineUrl: process.env.NEXT_PUBLIC_LINE_URL || PLACEHOLDER_LINE,
     instagramUrl: process.env.NEXT_PUBLIC_INSTAGRAM_URL || PLACEHOLDER_INSTAGRAM,
+    featuredVideoUrl: "",
+    featuredVideoCaption: "",
   };
+}
+
+function videoFromLegacy(instagram?: string): { url: string; caption: string } {
+  const raw = (instagram || "").trim();
+  if (!raw || raw.startsWith("@") || /^[A-Za-z0-9._]{1,30}$/.test(raw)) return { url: "", caption: "" };
+  if (raw.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(raw) as { v?: string; url?: string; c?: string; caption?: string };
+      return { url: String(parsed.v || parsed.url || ""), caption: String(parsed.c || parsed.caption || "") };
+    } catch {
+      return { url: "", caption: "" };
+    }
+  }
+  return { url: raw, caption: "" };
+}
+
+function videoPack(settings: SiteSettings): string {
+  if (!settings.featuredVideoUrl && !settings.featuredVideoCaption) return "";
+  return JSON.stringify({ v: settings.featuredVideoUrl, c: settings.featuredVideoCaption });
 }
 
 function normalize(partial: Partial<SiteSettings> & { instagram?: string }): SiteSettings {
   const defaults = defaultSettings();
+  const packed = videoFromLegacy(partial.instagram);
+  const instagramLooksLikeAccount =
+    Boolean(partial.instagram) &&
+    !String(partial.instagram).trim().startsWith("{") &&
+    !String(partial.instagram).includes("http") &&
+    !String(partial.instagram).includes("/");
   const instagramUrl =
     partial.instagramUrl ||
-    (partial.instagram ? `https://instagram.com/${String(partial.instagram).replace(/^@/, "")}` : "") ||
+    (instagramLooksLikeAccount
+      ? `https://instagram.com/${String(partial.instagram).replace(/^@/, "")}`
+      : "") ||
     defaults.instagramUrl;
   return {
     lineUrl: String(partial.lineUrl || defaults.lineUrl),
     instagramUrl,
+    featuredVideoUrl: String(partial.featuredVideoUrl || packed.url || ""),
+    featuredVideoCaption: String(partial.featuredVideoCaption || packed.caption || ""),
   };
 }
 
@@ -47,12 +80,18 @@ const cachedRemoteSettings = unstable_cache(
     const row = await failSoft(
       supabasePublic()
         .from("site_settings")
-        .select("instagram, line_url, instagram_url")
+        .select("*")
         .eq("id", 1)
         .maybeSingle()
         .then(({ data, error }) => {
           if (error || !data) return null;
-          return data as { instagram?: string; line_url?: string; instagram_url?: string };
+          return data as {
+            instagram?: string;
+            line_url?: string;
+            instagram_url?: string;
+            featured_video_url?: string;
+            featured_video_caption?: string;
+          };
         }),
       null
     );
@@ -61,6 +100,8 @@ const cachedRemoteSettings = unstable_cache(
       lineUrl: row.line_url,
       instagramUrl: row.instagram_url,
       instagram: row.instagram,
+      featuredVideoUrl: row.featured_video_url,
+      featuredVideoCaption: row.featured_video_caption,
     });
   },
   ["anson-public-settings"],
@@ -109,12 +150,25 @@ export async function saveSettings(settings: SiteSettings): Promise<void> {
       .from("site_settings")
       .upsert({
         id: 1,
-        instagram: "",
+        instagram: videoPack(settings),
         line_url: settings.lineUrl,
         instagram_url: settings.instagramUrl,
+        featured_video_url: settings.featuredVideoUrl,
+        featured_video_caption: settings.featuredVideoCaption,
         updated_at: new Date().toISOString(),
       });
-    if (error) throw error;
+    if (error) {
+      const { error: fallback } = await supabaseAdmin()
+        .from("site_settings")
+        .upsert({
+          id: 1,
+          instagram: videoPack(settings),
+          line_url: settings.lineUrl,
+          instagram_url: settings.instagramUrl,
+          updated_at: new Date().toISOString(),
+        });
+      if (fallback) throw error;
+    }
     return;
   }
   if (supabaseConfigured()) {

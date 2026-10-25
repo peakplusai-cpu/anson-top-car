@@ -67,6 +67,8 @@ create table if not exists site_settings (
 
 alter table site_settings add column if not exists line_url text not null default '';
 alter table site_settings add column if not exists instagram_url text not null default '';
+alter table site_settings add column if not exists featured_video_url text not null default '';
+alter table site_settings add column if not exists featured_video_caption text not null default '';
 
 alter table admin enable row level security;
 alter table staff enable row level security;

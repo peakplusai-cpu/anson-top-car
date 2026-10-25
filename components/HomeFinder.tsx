@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { BrandStrip } from "@/components/BrandStrip";
 import { ContactButtons } from "@/components/ContactButtons";
 import { HeroReel } from "@/components/HeroReel";
+import { SocialEmbed } from "@/components/SocialEmbed";
 import {
   BODY_TYPES,
   YEAR_RANGES,
@@ -15,16 +16,22 @@ import {
 } from "@/lib/catalog";
 import { formatMileage, formatPrice, padIndex, statusLabel } from "@/lib/format";
 import type { Car } from "@/lib/types";
+import { parseFeaturedVideo } from "@/lib/video";
 
 export function HomeFinder({
   cars,
   lineUrl,
   instagramUrl,
+  featuredVideoUrl = "",
+  featuredVideoCaption = "",
 }: {
   cars: Car[];
   lineUrl: string;
   instagramUrl: string;
+  featuredVideoUrl?: string;
+  featuredVideoCaption?: string;
 }) {
+  const featuredVideo = parseFeaturedVideo(featuredVideoUrl, featuredVideoCaption);
   const [brand, setBrand] = useState("");
   const [body, setBody] = useState("");
   const [price, setPrice] = useState<(typeof PRICE_RANGES)[number]["id"]>("any");
@@ -163,6 +170,14 @@ export function HomeFinder({
           </p>
         )}
       </section>
+
+      {featuredVideo ? (
+        <section className="reel-section" id="reels">
+          <p className="engraved">Latest</p>
+          <h2>最新介紹</h2>
+          <SocialEmbed video={featuredVideo} />
+        </section>
+      ) : null}
     </>
   );
 }
