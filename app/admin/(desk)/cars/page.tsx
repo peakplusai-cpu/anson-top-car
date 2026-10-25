@@ -2,12 +2,12 @@ import Link from "next/link";
 import { togglePublish } from "@/app/actions/cars";
 import { doorLabel } from "@/lib/catalog";
 import { formatPrice, statusLabel } from "@/lib/format";
-import { getStore } from "@/lib/store";
+import { listAdminCars } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCarsPage() {
-  const cars = (await getStore()).cars;
+  const cars = await listAdminCars();
 
   return (
     <>

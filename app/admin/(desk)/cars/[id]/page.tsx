@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
 import { deleteCar, updateCar } from "@/app/actions/cars";
 import { CarForm } from "@/components/CarForm";
-import { getStore } from "@/lib/store";
+import { getAdminCar } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditCarPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const car = (await getStore()).cars.find((item) => item.id === id);
+  const car = await getAdminCar(id);
   if (!car) notFound();
 
   return (

@@ -1,5 +1,5 @@
 import { deleteStaff, upsertStaff } from "@/app/actions/staff";
-import { getStore } from "@/lib/store";
+import { listAdminStaff } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,7 @@ export default async function StaffPage({
   searchParams: Promise<{ bound?: string; error?: string }>;
 }) {
   const { bound, error } = await searchParams;
-  const staff = [...(await getStore()).staff].sort((a, b) => a.sortOrder - b.sortOrder);
+  const staff = await listAdminStaff();
 
   return (
     <>

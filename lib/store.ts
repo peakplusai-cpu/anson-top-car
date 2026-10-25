@@ -297,6 +297,82 @@ export async function listPublicStaff(): Promise<Staff[]> {
 }
 
 const WRITE_MS = 12000;
+const WRITE_SOFT_MS = WRITE_MS + 400;
+
+/** List columns omit photos JSON so desk counts/tables do not pull the full inventory blob. */
+const ADMIN_CAR_LIST_COLUMNS =
+  "id,slug,make,make_en,model,year,price,mileage,color,interior,engine,horsepower,transmission,drivetrain,doors,body_type,displacement,options,specs,equipment,story,status,published,featured,created_at,updated_at";
+
+export async function listAdminCars(): Promise<Car[]> {
+  if (!supabaseConfigured()) return getJsonStore().cars;
+  if (!supabaseAdminConfigured()) return failSoft(listPublishedCars(), [] as Car[]);
+  const db = supabaseAdmin(WRITE_MS);
+  return failSoft(
+    db
+      .from("cars")
+      .select(ADMIN_CAR_LIST_COLUMNS)
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("supabase listAdminCars", error);
+          return [] as Car[];
+        }
+        return (data ?? []).map((row) => rowToCar(row as Record<string, unknown>));
+      }),
+    [] as Car[],
+    WRITE_SOFT_MS
+  );
+}
+
+export async function listAdminStaff(): Promise<Staff[]> {
+  if (!supabaseConfigured()) {
+    return [...getJsonStore().staff].sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+  if (!supabaseAdminConfigured()) return failSoft(listPublicStaff(), [] as Staff[]);
+  const db = supabaseAdmin(WRITE_MS);
+  return failSoft(
+    db
+      .from("staff")
+      .select("*")
+      .order("sort_order")
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("supabase listAdminStaff", error);
+          return [] as Staff[];
+        }
+        return (data ?? []).map((row) => rowToStaff(row as Record<string, unknown>));
+      }),
+    [] as Staff[],
+    WRITE_SOFT_MS
+  );
+}
+
+export async function getAdminCar(id: string): Promise<Car | null> {
+  if (!supabaseConfigured()) {
+    return getJsonStore().cars.find((car) => car.id === id) ?? null;
+  }
+  if (!supabaseAdminConfigured()) {
+    const published = await listPublishedCars();
+    return published.find((car) => car.id === id) ?? null;
+  }
+  const db = supabaseAdmin(WRITE_MS);
+  return failSoft(
+    db
+      .from("cars")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("supabase getAdminCar", error);
+          return null;
+        }
+        return data ? rowToCar(data as Record<string, unknown>) : null;
+      }),
+    null,
+    WRITE_SOFT_MS
+  );
+}
 
 function carRow(car: Car) {
   return {
