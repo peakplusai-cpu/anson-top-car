@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 import { deleteCar, updateCar } from "@/app/actions/cars";
 import { CarForm } from "@/components/CarForm";
+import { requireDeskAuth } from "@/lib/auth";
 import { getAdminCar } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditCarPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireDeskAuth();
   const { id } = await params;
   const car = await getAdminCar(id);
   if (!car) notFound();

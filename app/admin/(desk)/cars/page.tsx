@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { togglePublish } from "@/app/actions/cars";
+import { requireDeskAuth } from "@/lib/auth";
 import { doorLabel } from "@/lib/catalog";
 import { formatPrice, statusLabel } from "@/lib/format";
 import { listAdminCars } from "@/lib/store";
@@ -7,6 +8,7 @@ import { listAdminCars } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 export default async function AdminCarsPage() {
+  await requireDeskAuth();
   const cars = await listAdminCars();
 
   return (

@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { requireDeskAuth } from "@/lib/auth";
 import { formatPrice } from "@/lib/format";
 import { listAdminCars, listAdminStaff } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHome() {
+  await requireDeskAuth();
   const [cars, staff] = await Promise.all([listAdminCars(), listAdminStaff()]);
   const published = cars.filter((car) => car.published).length;
   const hidden = cars.length - published;

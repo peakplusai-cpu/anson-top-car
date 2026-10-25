@@ -1,4 +1,5 @@
 import { saveContacts } from "@/app/actions/settings";
+import { requireDeskAuth } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +9,7 @@ export default async function SettingsPage({
 }: {
   searchParams: Promise<{ saved?: string; error?: string }>;
 }) {
+  await requireDeskAuth();
   const { saved, error } = await searchParams;
   const settings = await getSettings();
 

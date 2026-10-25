@@ -2,13 +2,17 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { logoutAdmin } from "@/app/actions/auth";
-import { adminExists, isAuthenticated } from "@/lib/auth";
+import { adminExists, envAdminPassword, isAuthenticated } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function DeskLayout({ children }: { children: React.ReactNode }) {
+  const authed = await isAuthenticated();
+  if (!authed) {
+    if (!envAdminPassword() && !(await adminExists())) redirect("/admin/setup");
+    redirect("/admin/login");
+  }
   if (!(await adminExists())) redirect("/admin/setup");
-  if (!(await isAuthenticated())) redirect("/admin/login");
 
   const headerList = await headers();
   const path = headerList.get("x-invoke-path") || headerList.get("next-url") || "";

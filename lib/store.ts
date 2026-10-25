@@ -4,6 +4,7 @@ import { dirname, join } from "path";
 import { parseBodyType, parseDoors } from "./catalog";
 import type { Admin, Car, SpecRow, Staff, Store } from "./types";
 import { seedStore } from "./seed";
+import { isAuthenticated } from "./session";
 import {
   PUBLIC_DATA_TAG,
   failSoft,
@@ -304,6 +305,7 @@ const ADMIN_CAR_LIST_COLUMNS =
   "id,slug,make,make_en,model,year,price,mileage,color,interior,engine,horsepower,transmission,drivetrain,doors,body_type,displacement,options,specs,equipment,story,status,published,featured,created_at,updated_at";
 
 export async function listAdminCars(): Promise<Car[]> {
+  if (!(await isAuthenticated())) return [];
   if (!supabaseConfigured()) return getJsonStore().cars;
   if (!supabaseAdminConfigured()) return failSoft(listPublishedCars(), [] as Car[]);
   const db = supabaseAdmin(WRITE_MS);
@@ -325,6 +327,7 @@ export async function listAdminCars(): Promise<Car[]> {
 }
 
 export async function listAdminStaff(): Promise<Staff[]> {
+  if (!(await isAuthenticated())) return [];
   if (!supabaseConfigured()) {
     return [...getJsonStore().staff].sort((a, b) => a.sortOrder - b.sortOrder);
   }
@@ -348,6 +351,7 @@ export async function listAdminStaff(): Promise<Staff[]> {
 }
 
 export async function getAdminCar(id: string): Promise<Car | null> {
+  if (!(await isAuthenticated())) return null;
   if (!supabaseConfigured()) {
     return getJsonStore().cars.find((car) => car.id === id) ?? null;
   }

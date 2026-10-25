@@ -1,4 +1,5 @@
 import { deleteStaff, upsertStaff } from "@/app/actions/staff";
+import { requireDeskAuth } from "@/lib/auth";
 import { listAdminStaff } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +9,7 @@ export default async function StaffPage({
 }: {
   searchParams: Promise<{ bound?: string; error?: string }>;
 }) {
+  await requireDeskAuth();
   const { bound, error } = await searchParams;
   const staff = await listAdminStaff();
 

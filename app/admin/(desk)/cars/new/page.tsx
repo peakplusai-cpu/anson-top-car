@@ -1,11 +1,13 @@
 import { createCar } from "@/app/actions/cars";
 import { CarForm } from "@/components/CarForm";
+import { requireDeskAuth } from "@/lib/auth";
 
 export default async function NewCarPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  await requireDeskAuth();
   const { error } = await searchParams;
   return (
     <>
