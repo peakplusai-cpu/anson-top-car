@@ -29,6 +29,7 @@ export function HomeFinder({
   const [body, setBody] = useState("");
   const [price, setPrice] = useState<(typeof PRICE_RANGES)[number]["id"]>("any");
   const [year, setYear] = useState<(typeof YEAR_RANGES)[number]["id"]>("any");
+  const [logoOn, setLogoOn] = useState(false);
   const brands = useMemo(() => brandOptions(cars), [cars]);
   const matches = useMemo(
     () => filterCars(cars, brand, body, price, year),
@@ -37,8 +38,8 @@ export function HomeFinder({
 
   return (
     <>
-      <section className="hero">
-        <HeroReel cars={cars.filter((car) => car.featured)} />
+      <section className={`hero${logoOn ? " is-logo" : ""}`}>
+        <HeroReel onLogo={setLogoOn} />
         <div className="hero-shade" />
         <div className="hero-copy">
           <p className="engraved">台中 · 嚴選中古車</p>

@@ -1,46 +1,46 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Car } from "@/lib/types";
 
-const FALLBACK = [
-  { src: "/hero/lamborghini.jpg", label: "01" },
-  { src: "/hero/ferrari.jpg", label: "02" },
-  { src: "/hero/rolls-royce.jpg", label: "03" },
-  { src: "/hero/maybach.jpg", label: "04" },
+const SLIDES = [
+  { src: "/hero/bentley.jpg", label: "Bentley", kind: "photo" as const },
+  { src: "/hero/mercedes.jpg", label: "Mercedes-Benz", kind: "photo" as const },
+  { src: "/hero/anson-wordmark.jpg", label: "Anson Top Car", kind: "logo" as const },
 ];
 
-export function HeroReel({ cars }: { cars: Car[] }) {
-  const slides =
-    cars.filter((car) => car.photos[0]).slice(0, 5).map((car, i) => ({
-      src: car.photos[0].url,
-      label: String(i + 1).padStart(2, "0"),
-    })) || FALLBACK;
-  const list = slides.length ? slides : FALLBACK;
+export function HeroReel({ onLogo }: { onLogo?: (on: boolean) => void }) {
   const [index, setIndex] = useState(0);
+  const current = SLIDES[index];
+
+  useEffect(() => {
+    onLogo?.(current.kind === "logo");
+  }, [current.kind, onLogo]);
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce || list.length < 2) return;
+    if (reduce || SLIDES.length < 2) return;
     const timer = window.setInterval(() => {
-      setIndex((current) => (current + 1) % list.length);
+      setIndex((i) => (i + 1) % SLIDES.length);
     }, 5200);
     return () => window.clearInterval(timer);
-  }, [list.length]);
+  }, []);
 
   return (
     <>
       <div className="hero-reel" aria-hidden>
-        {list.map((slide, i) => (
-          <div key={`${slide.src}-${i}`} className={`hero-slide${i === index ? " on" : ""}`}>
+        {SLIDES.map((slide, i) => (
+          <div
+            key={slide.src}
+            className={`hero-slide${i === index ? " on" : ""}${slide.kind === "logo" ? " logo" : ""}`}
+          >
             <img src={slide.src} alt="" />
           </div>
         ))}
       </div>
       <div className="hero-reel-ticks" aria-hidden>
-        {list.map((slide, i) => (
+        {SLIDES.map((slide, i) => (
           <button
-            key={`${slide.src}-t-${i}`}
+            key={`${slide.src}-t`}
             type="button"
             data-on={i === index}
             onClick={() => setIndex(i)}
