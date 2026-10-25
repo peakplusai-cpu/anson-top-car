@@ -70,7 +70,6 @@ export function carMatchesBrand(car: Car, brand: BrandOption): boolean {
 }
 
 export function brandOptions(cars: Car[]): BrandOption[] {
-  if (!cars.length) return HOUSE_BRANDS;
   const present = HOUSE_BRANDS.filter((brand) => cars.some((car) => carMatchesBrand(car, brand)));
   const extras: BrandOption[] = [];
   for (const car of cars) {
@@ -87,7 +86,8 @@ export function filterCars(
   brandId: string,
   bodyType: string,
   priceId: string,
-  yearId: string
+  yearId: string,
+  doors: DoorFilter = 0
 ): Car[] {
   const brands = brandOptions(cars);
   const brand = brandId ? brands.find((item) => item.id === brandId) : undefined;
@@ -96,6 +96,7 @@ export function filterCars(
   return cars.filter((car) => {
     if (brand && !carMatchesBrand(car, brand)) return false;
     if (bodyType && car.bodyType !== bodyType) return false;
+    if (doors && car.doors !== doors) return false;
     if (car.price < range.min || car.price >= range.max) return false;
     if (car.year < years.min || car.year >= years.max) return false;
     return true;

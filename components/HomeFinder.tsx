@@ -8,11 +8,13 @@ import { HeroReel } from "@/components/HeroReel";
 import { SocialEmbed } from "@/components/SocialEmbed";
 import {
   BODY_TYPES,
+  DOOR_OPTIONS,
   YEAR_RANGES,
   brandOptions,
   bodyLabel,
   filterCars,
   PRICE_RANGES,
+  type DoorFilter,
 } from "@/lib/catalog";
 import { formatMileage, formatPrice, padIndex, statusLabel } from "@/lib/format";
 import type { Car } from "@/lib/types";
@@ -34,13 +36,14 @@ export function HomeFinder({
   const featuredVideo = parseFeaturedVideo(featuredVideoUrl, featuredVideoCaption);
   const [brand, setBrand] = useState("");
   const [body, setBody] = useState("");
+  const [doors, setDoors] = useState<DoorFilter>(0);
   const [price, setPrice] = useState<(typeof PRICE_RANGES)[number]["id"]>("any");
   const [year, setYear] = useState<(typeof YEAR_RANGES)[number]["id"]>("any");
   const [logoOn, setLogoOn] = useState(false);
   const brands = useMemo(() => brandOptions(cars), [cars]);
   const matches = useMemo(
-    () => filterCars(cars, brand, body, price, year),
-    [cars, brand, body, price, year]
+    () => filterCars(cars, brand, body, price, year, doors),
+    [cars, brand, body, price, year, doors]
   );
 
   return (
@@ -92,7 +95,7 @@ export function HomeFinder({
           <button type="button" data-on={body === ""} onClick={() => setBody("")}>
             全部
           </button>
-          {BODY_TYPES.filter((item) => cars.some((car) => car.bodyType === item.id)).map((item) => (
+          {BODY_TYPES.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -100,6 +103,22 @@ export function HomeFinder({
               onClick={() => setBody(item.id)}
             >
               {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="filter-row">
+          <span>車門</span>
+          <button type="button" data-on={doors === 0} onClick={() => setDoors(0)}>
+            全部
+          </button>
+          {DOOR_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              data-on={doors === option.value}
+              onClick={() => setDoors(option.value)}
+            >
+              {option.label}
             </button>
           ))}
         </div>
@@ -166,7 +185,7 @@ export function HomeFinder({
           </ul>
         ) : (
           <p className="empty-line">
-            {cars.length ? "此條件目前沒有車輛，請放寬廠牌、價格、年份或車型。" : "尚無上架車輛。"}
+            {cars.length ? "此條件目前沒有車輛，請放寬廠牌、車型、車門、價格或年份。" : "尚無上架車輛。"}
           </p>
         )}
       </section>
