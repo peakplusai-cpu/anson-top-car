@@ -73,19 +73,36 @@ function parseCar(formData: FormData, existing?: Car): Omit<Car, "id" | "created
   };
 }
 
+function rethrowRedirect(error: unknown): void {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    String((error as { digest?: string }).digest).startsWith("NEXT_REDIRECT")
+  ) {
+    throw error;
+  }
+}
+
 export async function createCar(formData: FormData) {
   await requireAuth();
-  const store = await getStore();
-  const parsed = parseCar(formData);
-  if (store.cars.some((car) => car.slug === parsed.slug)) {
-    parsed.slug = `${parsed.slug}-${uid("x").slice(-4)}`;
+  try {
+    const store = await getStore();
+    const parsed = parseCar(formData);
+    if (store.cars.some((car) => car.slug === parsed.slug)) {
+      parsed.slug = `${parsed.slug}-${uid("x").slice(-4)}`;
+    }
+    store.cars.unshift({
+      ...parsed,
+      id: uid("car"),
+      createdAt: new Date().toISOString(),
+    });
+    await saveStore(store);
+  } catch (error) {
+    rethrowRedirect(error);
+    console.error("createCar", error);
+    redirect("/admin/cars/new?error=save");
   }
-  store.cars.unshift({
-    ...parsed,
-    id: uid("car"),
-    createdAt: new Date().toISOString(),
-  });
-  await saveStore(store);
   revalidatePublic(["/admin"]);
   redirect("/admin/cars");
 }

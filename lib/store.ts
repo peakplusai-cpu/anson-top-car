@@ -137,10 +137,10 @@ async function getSupabaseStore(): Promise<Store> {
     ]),
     null
   );
-  if (!results) return emptyStore();
+  if (!results) throw new Error("資料庫連線逾時，請再試一次。");
   const [adminRes, staffRes, carsRes] = results;
+  if (carsRes.error) throw new Error(carsRes.error.message || "讀取車輛失敗");
   if (staffRes.error) console.error("supabase staff", staffRes.error);
-  if (carsRes.error) console.error("supabase cars", carsRes.error);
   if (adminRes.error) console.error("supabase admin", adminRes.error);
   const adminRow = adminRes.data as { password_hash: string; created_at: string } | null;
   const admin: Admin | null = adminRow
@@ -164,20 +164,22 @@ async function saveSupabaseStore(store: Store): Promise<void> {
     });
     if (error) throw error;
   }
-  const { error: staffErr } = await db.from("staff").upsert(
-    store.staff.map((person) => ({
-      id: person.id,
-      display_name: person.displayName,
-      role: person.role,
-      line_url: person.lineUrl,
-      line_id: person.lineId,
-      note: person.note,
-      line_user_id: person.lineUserId,
-      sort_order: person.sortOrder,
-      created_at: person.createdAt,
-    }))
-  );
-  if (staffErr) throw staffErr;
+  if (store.staff.length) {
+    const { error: staffErr } = await db.from("staff").upsert(
+      store.staff.map((person) => ({
+        id: person.id,
+        display_name: person.displayName,
+        role: person.role,
+        line_url: person.lineUrl,
+        line_id: person.lineId,
+        note: person.note,
+        line_user_id: person.lineUserId,
+        sort_order: person.sortOrder,
+        created_at: person.createdAt,
+      }))
+    );
+    if (staffErr) throw staffErr;
+  }
   const remoteStaff = await db.from("staff").select("id");
   const keepStaff = new Set(store.staff.map((s) => s.id));
   const extraStaff = (remoteStaff.data ?? []).map((r) => r.id).filter((id) => !keepStaff.has(id));
@@ -229,7 +231,7 @@ export async function getStore(): Promise<Store> {
       return { admin: null, staff, cars: published, sessions: [] };
     } catch (error) {
       console.error("supabase getStore", error);
-      return emptyStore();
+      throw error;
     }
   }
   return getJsonStore();
