@@ -478,9 +478,19 @@ img { max-width: 100%; display: block; }
   margin: 8px 0 28px;
 }
 
+.reel-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
 .reel-card {
   margin: 0;
-  width: min(420px, 100%);
+  width: 100%;
+  min-width: 0;
   background: var(--paper);
   border: 1px solid var(--hair);
   border-radius: 24px;

@@ -12,11 +12,16 @@ import {
   supabasePublic,
 } from "./supabase";
 
+export type VideoSlot = { url: string; caption: string };
+
+export const FEATURED_VIDEO_COUNT = 3;
+
 export type SiteSettings = {
   lineUrl: string;
   instagramUrl: string;
   featuredVideoUrl: string;
   featuredVideoCaption: string;
+  featuredVideos: VideoSlot[];
 };
 
 const SETTINGS_PATH = join(process.cwd(), "data", "settings.json");
@@ -24,37 +29,101 @@ const SETTINGS_PATH = join(process.cwd(), "data", "settings.json");
 export const PLACEHOLDER_LINE = "https://line.me/R/ti/p/@ansontopcar";
 export const PLACEHOLDER_INSTAGRAM = "https://instagram.com/ansontopcar";
 
+export function emptyVideoSlots(): VideoSlot[] {
+  return Array.from({ length: FEATURED_VIDEO_COUNT }, () => ({ url: "", caption: "" }));
+}
+
+function padVideoSlots(slots: VideoSlot[]): VideoSlot[] {
+  const next = emptyVideoSlots();
+  slots.slice(0, FEATURED_VIDEO_COUNT).forEach((slot, index) => {
+    next[index] = {
+      url: String(slot?.url ?? "").trim(),
+      caption: String(slot?.caption ?? "").trim().slice(0, 280),
+    };
+  });
+  return next;
+}
+
 export function defaultSettings(): SiteSettings {
+  const featuredVideos = emptyVideoSlots();
   return {
     lineUrl: process.env.NEXT_PUBLIC_LINE_URL || PLACEHOLDER_LINE,
     instagramUrl: process.env.NEXT_PUBLIC_INSTAGRAM_URL || PLACEHOLDER_INSTAGRAM,
     featuredVideoUrl: "",
     featuredVideoCaption: "",
+    featuredVideos,
   };
 }
 
-function videoFromLegacy(instagram?: string): { url: string; caption: string } {
+function videoFromLegacy(instagram?: string): { slots: VideoSlot[]; hasList: boolean } {
+  const empty = { slots: emptyVideoSlots(), hasList: false };
   const raw = (instagram || "").trim();
-  if (!raw || raw.startsWith("@") || /^[A-Za-z0-9._]{1,30}$/.test(raw)) return { url: "", caption: "" };
+  if (!raw || raw.startsWith("@") || /^[A-Za-z0-9._]{1,30}$/.test(raw)) return empty;
   if (raw.startsWith("{")) {
     try {
-      const parsed = JSON.parse(raw) as { v?: string; url?: string; c?: string; caption?: string };
-      return { url: String(parsed.v || parsed.url || ""), caption: String(parsed.c || parsed.caption || "") };
+      const parsed = JSON.parse(raw) as {
+        v?: string;
+        url?: string;
+        c?: string;
+        caption?: string;
+        videos?: { v?: string; url?: string; c?: string; caption?: string }[];
+      };
+      if (Array.isArray(parsed.videos)) {
+        return {
+          hasList: true,
+          slots: padVideoSlots(
+            parsed.videos.map((item) => ({
+              url: String(item?.v || item?.url || ""),
+              caption: String(item?.c || item?.caption || ""),
+            }))
+          ),
+        };
+      }
+      const slots = emptyVideoSlots();
+      slots[0] = { url: String(parsed.v || parsed.url || ""), caption: String(parsed.c || parsed.caption || "") };
+      return { slots, hasList: false };
     } catch {
-      return { url: "", caption: "" };
+      return empty;
     }
   }
-  return { url: raw, caption: "" };
+  const slots = emptyVideoSlots();
+  slots[0] = { url: raw, caption: "" };
+  return { slots, hasList: false };
 }
 
 function videoPack(settings: SiteSettings): string {
-  if (!settings.featuredVideoUrl && !settings.featuredVideoCaption) return "";
-  return JSON.stringify({ v: settings.featuredVideoUrl, c: settings.featuredVideoCaption });
+  const slots = padVideoSlots(settings.featuredVideos?.length ? settings.featuredVideos : [
+    { url: settings.featuredVideoUrl, caption: settings.featuredVideoCaption },
+  ]);
+  if (slots.every((slot) => !slot.url && !slot.caption)) return "";
+  return JSON.stringify({
+    v: slots[0].url,
+    c: slots[0].caption,
+    videos: slots.map((slot) => ({ v: slot.url, c: slot.caption })),
+  });
 }
 
 function normalize(partial: Partial<SiteSettings> & { instagram?: string }): SiteSettings {
   const defaults = defaultSettings();
   const packed = videoFromLegacy(partial.instagram);
+  const slots = packed.hasList ? packed.slots : emptyVideoSlots();
+  if (!packed.hasList) {
+    slots[0] = {
+      url: String(partial.featuredVideoUrl || packed.slots[0].url || ""),
+      caption: String(partial.featuredVideoCaption || packed.slots[0].caption || ""),
+    };
+  }
+  if (Array.isArray(partial.featuredVideos) && partial.featuredVideos.some((slot) => slot?.url || slot?.caption)) {
+    partial.featuredVideos.forEach((slot, index) => {
+      if (index >= FEATURED_VIDEO_COUNT) return;
+      if (!packed.hasList || slot?.url || slot?.caption) {
+        slots[index] = {
+          url: String(slot?.url ?? slots[index].url),
+          caption: String(slot?.caption ?? slots[index].caption),
+        };
+      }
+    });
+  }
   const instagramLooksLikeAccount =
     Boolean(partial.instagram) &&
     !String(partial.instagram).trim().startsWith("{") &&
@@ -69,8 +138,9 @@ function normalize(partial: Partial<SiteSettings> & { instagram?: string }): Sit
   return {
     lineUrl: String(partial.lineUrl || defaults.lineUrl),
     instagramUrl,
-    featuredVideoUrl: String(partial.featuredVideoUrl || packed.url || ""),
-    featuredVideoCaption: String(partial.featuredVideoCaption || packed.caption || ""),
+    featuredVideoUrl: slots[0].url,
+    featuredVideoCaption: slots[0].caption,
+    featuredVideos: slots,
   };
 }
 

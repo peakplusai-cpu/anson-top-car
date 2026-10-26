@@ -26,14 +26,21 @@ export function HomeFinder({
   instagramUrl,
   featuredVideoUrl = "",
   featuredVideoCaption = "",
+  featuredVideos,
 }: {
   cars: Car[];
   lineUrl: string;
   instagramUrl: string;
   featuredVideoUrl?: string;
   featuredVideoCaption?: string;
+  featuredVideos?: { url: string; caption: string }[];
 }) {
-  const featuredVideo = parseFeaturedVideo(featuredVideoUrl, featuredVideoCaption);
+  const slots = featuredVideos?.length
+    ? featuredVideos
+    : [{ url: featuredVideoUrl, caption: featuredVideoCaption }];
+  const featuredVideosReady = slots
+    .map((slot) => parseFeaturedVideo(slot.url, slot.caption))
+    .filter((video): video is NonNullable<typeof video> => Boolean(video));
   const [brand, setBrand] = useState("");
   const [body, setBody] = useState("");
   const [doors, setDoors] = useState<DoorFilter>(0);
@@ -190,11 +197,15 @@ export function HomeFinder({
         )}
       </section>
 
-      {featuredVideo ? (
+      {featuredVideosReady.length ? (
         <section className="reel-section" id="reels">
           <p className="engraved">Latest</p>
           <h2>最新介紹</h2>
-          <SocialEmbed video={featuredVideo} />
+          <div className="reel-row">
+            {featuredVideosReady.map((video, index) => (
+              <SocialEmbed key={`${video.url}-${index}`} video={video} />
+            ))}
+          </div>
         </section>
       ) : null}
     </>

@@ -18,7 +18,7 @@ export default async function SettingsPage({
       <p className="engraved">Site</p>
       <h1>聯絡設定</h1>
       <p className="mute" style={{ maxWidth: 520, lineHeight: 1.7, marginBottom: 28 }}>
-        LINE 與 Instagram 為全站按鈕連結。介紹影片只要貼一則 Instagram Reels／貼文或抖音連結，首頁只顯示這一格；換成新片改這裡即可。
+        LINE 與 Instagram 為全站按鈕連結。介紹影片最多三格，首頁排成一列；空的那格不顯示。換成新片改這裡即可。
       </p>
       {saved ? <p className="flash">已儲存。</p> : null}
       {error === "line" ? <p className="flash">LINE 網址格式不正確。</p> : null}
@@ -50,27 +50,33 @@ export default async function SettingsPage({
               spellCheck={false}
             />
           </div>
-          <div className="field wide">
-            <label htmlFor="featuredVideoUrl">最新介紹影片（Instagram 或抖音，一格）</label>
-            <input
-              id="featuredVideoUrl"
-              name="featuredVideoUrl"
-              defaultValue={settings.featuredVideoUrl}
-              placeholder="https://www.instagram.com/reel/…… 或 https://www.tiktok.com/@帳號/video/……"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </div>
-          <div className="field wide">
-            <label htmlFor="featuredVideoCaption">影片說明（選填）</label>
-            <input
-              id="featuredVideoCaption"
-              name="featuredVideoCaption"
-              defaultValue={settings.featuredVideoCaption}
-              placeholder="例如：省油耐操的代名詞，車壇不滅的國民神車。"
-              autoComplete="off"
-            />
-          </div>
+          {[1, 2, 3].map((index) => {
+            const suffix = index === 1 ? "" : String(index);
+            const slot = settings.featuredVideos[index - 1] ?? { url: "", caption: "" };
+            return (
+              <div className="field wide" key={index}>
+                <label htmlFor={`featuredVideoUrl${suffix}`}>介紹影片 {index}（Instagram 或抖音）</label>
+                <input
+                  id={`featuredVideoUrl${suffix}`}
+                  name={`featuredVideoUrl${suffix}`}
+                  defaultValue={slot.url}
+                  placeholder="https://www.instagram.com/reel/…… 或 https://www.tiktok.com/@帳號/video/……"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <label htmlFor={`featuredVideoCaption${suffix}`} style={{ marginTop: 12 }}>
+                  影片 {index} 說明（選填）
+                </label>
+                <input
+                  id={`featuredVideoCaption${suffix}`}
+                  name={`featuredVideoCaption${suffix}`}
+                  defaultValue={slot.caption}
+                  placeholder="例如：賓士休旅最帥的絕對是他"
+                  autoComplete="off"
+                />
+              </div>
+            );
+          })}
         </div>
         <button className="btn" type="submit">
           儲存

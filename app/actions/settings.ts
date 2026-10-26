@@ -11,19 +11,29 @@ export async function saveContacts(formData: FormData) {
   if (!(await isAuthenticated())) redirect("/admin/login");
   const line = parseContactUrl(String(formData.get("lineUrl") ?? ""), "line");
   const ig = parseContactUrl(String(formData.get("instagramUrl") ?? ""), "instagram");
-  const video = parseFeaturedVideoUrl(String(formData.get("featuredVideoUrl") ?? ""));
+  const featuredVideos = [1, 2, 3].map((index) => {
+    const suffix = index === 1 ? "" : String(index);
+    const parsed = parseFeaturedVideoUrl(String(formData.get(`featuredVideoUrl${suffix}`) ?? ""));
+    return {
+      ok: parsed.ok,
+      url: parsed.ok ? parsed.url : "",
+      caption: String(formData.get(`featuredVideoCaption${suffix}`) ?? "").trim().slice(0, 280),
+    };
+  });
   if (!line.ok) redirect("/admin/settings?error=line");
   if (!ig.ok) redirect("/admin/settings?error=instagram");
-  if (!video.ok) redirect("/admin/settings?error=video");
+  if (featuredVideos.some((slot) => !slot.ok)) redirect("/admin/settings?error=video");
 
   try {
     const current = await getSettings();
+    const slots = featuredVideos.map(({ url, caption }) => ({ url, caption }));
     await saveSettings({
       ...current,
       lineUrl: line.url,
       instagramUrl: ig.url,
-      featuredVideoUrl: video.url,
-      featuredVideoCaption: String(formData.get("featuredVideoCaption") ?? "").trim().slice(0, 280),
+      featuredVideos: slots,
+      featuredVideoUrl: slots[0].url,
+      featuredVideoCaption: slots[0].caption,
     });
   } catch {
     redirect("/admin/settings?error=save");

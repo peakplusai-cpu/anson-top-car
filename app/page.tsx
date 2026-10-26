@@ -20,8 +20,7 @@ export default async function HomePage() {
         cars={published}
         lineUrl={settings.lineUrl}
         instagramUrl={settings.instagramUrl}
-        featuredVideoUrl={settings.featuredVideoUrl}
-        featuredVideoCaption={settings.featuredVideoCaption}
+        featuredVideos={settings.featuredVideos}
       />
       <Footer staff={staff} settings={settings} />
     </>
