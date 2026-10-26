@@ -1,3 +1,5 @@
+import { lineTarget } from "@/lib/line";
+
 export function ContactButtons({
   lineUrl,
   instagramUrl,
@@ -8,10 +10,11 @@ export function ContactButtons({
   inverted?: boolean;
 }) {
   const ghost = inverted ? "btn btn-ig" : "btn btn-ghost btn-ig";
+  const lineHref = lineTarget(lineUrl, "").addFriendWeb;
   return (
     <div className="contact-row">
-      {lineUrl ? (
-        <a className="btn btn-line" href={lineUrl} target="_blank" rel="noopener noreferrer">
+      {lineHref ? (
+        <a className="btn btn-line" href={lineHref} target="_blank" rel="noopener noreferrer">
           LINE 諮詢
         </a>
       ) : null}
