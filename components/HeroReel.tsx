@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 const SLIDES = [
-  { src: "/hero/bentley.jpg", label: "Bentley", kind: "photo" as const },
+  { src: "/hero/ferrari.jpg", label: "Ferrari", kind: "photo" as const },
   { src: "/hero/mercedes.jpg", label: "Mercedes-Benz", kind: "photo" as const },
   { src: "/hero/anson-wordmark.jpg", label: "Anson Top Car", kind: "logo" as const },
 ];
