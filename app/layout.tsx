@@ -38,12 +38,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="zh-Hant" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "try{var l=location,r=document.documentElement;if(l.pathname==='/'&&(/[?&]intro/.test(l.search)||!sessionStorage.getItem('atc-intro-seen'))){r.classList.add('intro-lock')}else{r.classList.add('intro-seen')}}catch(e){}",
-          }}
-        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
