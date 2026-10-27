@@ -24,8 +24,13 @@ export async function saveContacts(formData: FormData) {
   if (!ig.ok) redirect("/admin/settings?error=instagram");
   if (featuredVideos.some((slot) => !slot.ok)) redirect("/admin/settings?error=video");
 
+  let current: Awaited<ReturnType<typeof getSettings>>;
   try {
-    const current = await getSettings();
+    current = await getSettings();
+  } catch {
+    redirect("/admin/settings?error=save");
+  }
+  try {
     const slots = featuredVideos.map(({ url, caption }) => ({ url, caption }));
     await saveSettings({
       ...current,

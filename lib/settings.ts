@@ -165,7 +165,9 @@ const cachedRemoteSettings = unstable_cache(
         }),
       null
     );
-    if (!row) return defaultSettings();
+    // Throw so a timed-out read is not cached as "no videos". The homepage then
+    // keeps the previous page instead of flashing an empty row.
+    if (!row) throw new Error("settings unavailable");
     return normalize({
       lineUrl: row.line_url,
       instagramUrl: row.instagram_url,
@@ -180,11 +182,7 @@ const cachedRemoteSettings = unstable_cache(
 
 export async function getSettings(): Promise<SiteSettings> {
   if (supabaseConfigured()) {
-    try {
-      return await cachedRemoteSettings();
-    } catch {
-      return defaultSettings();
-    }
+    return cachedRemoteSettings();
   }
   if (isReadOnlyRuntime()) return defaultSettings();
   try {

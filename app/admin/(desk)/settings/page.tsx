@@ -11,7 +11,21 @@ export default async function SettingsPage({
 }) {
   await requireDeskAuth();
   const { saved, error } = await searchParams;
-  const settings = await getSettings();
+  let settings: Awaited<ReturnType<typeof getSettings>> | null = null;
+  try {
+    settings = await getSettings();
+  } catch {
+    settings = null;
+  }
+  if (!settings) {
+    return (
+      <>
+        <p className="engraved">Site</p>
+        <h1>聯絡設定</h1>
+        <p className="flash">暫時讀不到目前的設定。請再整理一次，先不要儲存，以免把首頁影片清掉。</p>
+      </>
+    );
+  }
 
   return (
     <>
